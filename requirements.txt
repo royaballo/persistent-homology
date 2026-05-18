@@ -1,0 +1,16 @@
+# Core numerical stack
+numpy>=2.1
+scipy>=1.15
+
+# Plotting
+matplotlib>=3.8
+
+# Reference libraries for benchmarking and correctness checks
+ripser>=0.6.14
+gudhi>=3.11.0
+
+# Data handling for benchmark tables
+pandas>=2.0
+
+# Testing
+pytest>=8.0

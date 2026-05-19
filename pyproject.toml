@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "persistent-homology"
+version = "0.1.0"
+description = "A from-scratch implementation of persistent homology for Vietoris-Rips filtrations."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Roy Aballo", email = "abalo.g.roy@aims-senegal.org"},
+]
+
+dependencies = [
+    "numpy>=2.1",
+    "scipy>=1.15",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "ripser>=0.6.14",
+    "gudhi>=3.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools]
+# Both the core package and the dataset package are importable once
+# the project is installed with `pip install -e .`.
+packages = ["persistent_homology", "datasets"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

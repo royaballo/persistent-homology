@@ -1,7 +1,7 @@
 # Persistent Homology
 
 A pedagogical, from-scratch implementation of persistent homology for
-Vietoris--Rips filtrations, developed as the computational component of an
+Vietoris-Rips filtrations, developed as the computational component of an
 MSc thesis.
 
 <!-- TODO: one or two sentences describing the project and linking to the thesis PDF. -->
@@ -21,7 +21,7 @@ MSc thesis.
 ```bash
 git clone https://github.com/<username>/persistent-homology.git
 cd persistent-homology
-pip install -r requirements.txt
+pip install -e .
 ```
 
 <!-- TODO: if you turn the project into an installable package, document
@@ -44,7 +44,7 @@ diagram = compute_persistence(points, max_dim=2, max_eps=2.0,
 ## Repository Structure
 
 ```
-src/persistent_homology/   core implementation
+persistent_homology/   core implementation
     filtration.py          Vietoris-Rips complex construction
     boundary.py            boundary and coboundary matrices
     reduction.py           standard, clearing, and cohomology reductions

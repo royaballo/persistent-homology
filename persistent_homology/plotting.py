@@ -9,7 +9,7 @@ and an optional list of annotations highlights dataset-specific features
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-# LaTeX-friendly defaults, applied on import.
+# Graph parameters.
 plt.rcParams.update({
     "font.family": "serif",
     "axes.labelsize": 14,
@@ -22,7 +22,6 @@ plt.rcParams.update({
 
 DIM_COLOR = {0: "#1565C0", 1: "#C62828", 2: "#2E7D32"}
 DIM_LABEL = {0: r"$H_0$", 1: r"$H_1$", 2: r"$H_2$"}
-
 
 
 # Diagram helpers
@@ -46,6 +45,7 @@ def ripser_to_diagram(result):
 
 
 # Persistence diagram
+
 def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
                              title=None, ax=None, savepath=None):
     """Draw a persistence diagram.
@@ -139,7 +139,6 @@ def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
     return ax
 
 
-
 # Benchmark plots
 
 # Fixed visual style per method: our three implementations in blues,
@@ -161,23 +160,71 @@ METHOD_ORDER = ["our_standard", "our_clearing", "our_cohomology",
                 "GUDHI", "Ripser"]
 
 
-def plot_loglog_time(df, exponents=None, n_col="n", time_col="time_s",
-                     method_col="method", title=None, savepath=None):
-    """Log-log plot of computation time versus number of points.
+# Per-quantity y-axis configuration.
+_QUANTITY_CONFIG = {
+    "time": {
+        "default_y_col": "time_s",
+        "ylabel": "Computation time (seconds)",
+        "y_ticks": [0.001, 0.01, 0.1, 1, 10, 100],
+        "y_tick_labels": ["1 ms", "10 ms", "0.1 s", "1 s", "10 s", "100 s"],
+    },
+    "memory": {
+        "default_y_col": "peak_mb",
+        "ylabel": "Peak memory (MB)",
+        "y_ticks": [1, 10, 100, 1000],
+        "y_tick_labels": ["1 MB", "10 MB", "100 MB", "1 GB"],
+    },
+}
 
-    The empirical scaling exponents are not computed here: they are a
-    measurement, produced and saved by "computation_time.py". They are
-    passed in via "exponents" purely for display in the legend.
+# Per-x-axis configuration. The default axis is the number of points;
+# the 'max_eps' axis is used for the filtration-scope experiment, where
+# the x variable is the maximum filtration value instead.
+_XAXIS_CONFIG = {
+    "n": {
+        "default_col": "n",
+        "xlabel": "Number of points $n$",
+        "exponent_var": "n",
+    },
+    "max_eps": {
+        "default_col": "max_eps",
+        "xlabel": r"Maximum filtration value $\varepsilon_{\max}$",
+        "exponent_var": None,
+    },
+}
+
+
+def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
+                        x_col=None, y_col=None, method_col="method",
+                        title=None, savepath=None):
+    """Log-log plot of a scaling quantity against a chosen x-axis.
+
+    Supports two y-axes ("quantity='time'" or "'memory'") and two
+    x-axes ("xaxis='n'" for size-scaling experiments,
+    "xaxis='max_eps'" for filtration-scope experiments). The empirical
+    scaling exponents, when given, are displayed in the legend only.
+    Exponents are only meaningful when plotting against "n"; they are
+    silently ignored for "xaxis='max_eps'".
 
     Parameters
     ----------
     df : pandas DataFrame
-        Must contain the size, time, and method columns named below.
+        Must contain the x, y, and method columns named below.
+    quantity : {'time', 'memory'}
+        Selects the y-axis label and tick formatting. The default y-axis
+        column name is also inferred from this.
+    xaxis : {'n', 'max_eps'}
+        Selects the x-axis label and the default x-axis column name.
     exponents : dict, optional
         Maps a method name to its fitted scaling exponent. When given,
-        each legend entry is annotated with "n^p".
-    n_col, time_col, method_col : str
-        Column names.
+        each legend entry is annotated with "n^p". Only used when
+        "xaxis='n'".
+    x_col : str, optional
+        Column holding the x values; defaults to the natural column
+        of the chosen x-axis ("'n'" or "'max_eps'").
+    y_col : str, optional
+        Column holding the values; defaults to the quantity's natural
+        column ("'time_s'" or "'peak_mb'").
+    method_col : str
     title : str, optional
     savepath : str, optional
 
@@ -185,22 +232,42 @@ def plot_loglog_time(df, exponents=None, n_col="n", time_col="time_s",
     -------
     ax : matplotlib axis
     """
+    if quantity not in _QUANTITY_CONFIG:
+        raise ValueError(
+            f"unknown quantity {quantity!r}; "
+            f"expected one of {list(_QUANTITY_CONFIG)}"
+        )
+    if xaxis not in _XAXIS_CONFIG:
+        raise ValueError(
+            f"unknown xaxis {xaxis!r}; "
+            f"expected one of {list(_XAXIS_CONFIG)}"
+        )
+    ycfg = _QUANTITY_CONFIG[quantity]
+    xcfg = _XAXIS_CONFIG[xaxis]
+    if y_col is None:
+        y_col = ycfg["default_y_col"]
+    if x_col is None:
+        x_col = xcfg["default_col"]
+
     _, ax = plt.subplots(figsize=(9, 6))
 
     # Plot methods in a fixed order, so the legend is always consistent.
     methods_present = [m for m in METHOD_ORDER
                        if m in df[method_col].unique()]
     for method in methods_present:
-        group = df[df[method_col] == method].sort_values(n_col)
+        group = df[df[method_col] == method].sort_values(x_col)
+        # Drop rows where the measurement is missing (e.g. MemoryError).
+        group = group[group[y_col].notna()]
         if group.empty:
             continue
         style = METHOD_STYLE[method]
 
         label = style["label"]
-        if exponents and method in exponents:
-            label = f"{label}  ($n^{{{exponents[method]:.1f}}}$)"
+        # Exponent annotations only make sense for size scaling.
+        if exponents and method in exponents and xcfg["exponent_var"]:
+            label = f"{label}  (${xcfg['exponent_var']}^{{{exponents[method]:.2f}}}$)"
 
-        ax.plot(group[n_col], group[time_col],
+        ax.plot(group[x_col], group[y_col],
                 label=label,
                 color=style["color"],
                 marker=style["marker"],
@@ -213,18 +280,22 @@ def plot_loglog_time(df, exponents=None, n_col="n", time_col="time_s",
 
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel("Number of points $n$")
-    ax.set_ylabel("Computation time (seconds)")
+    ax.set_xlabel(xcfg["xlabel"])
+    ax.set_ylabel(ycfg["ylabel"])
 
-    # x-ticks at the actual measurement sizes, not powers of ten.
-    sizes = sorted(df[n_col].unique())
-    ax.set_xticks(sizes)
-    ax.set_xticklabels([str(int(n)) for n in sizes])
+    # x-ticks at the actual measurement values, not powers of ten.
+    x_values = sorted(df[x_col].unique())
+    ax.set_xticks(x_values)
+    # Integer formatting for n, decimal formatting for max_eps.
+    if xaxis == "n":
+        ax.set_xticklabels([str(int(x)) for x in x_values])
+    else:
+        ax.set_xticklabels([f"{x:g}" for x in x_values])
     ax.minorticks_off()
 
-    # Human-readable y-tick labels instead of 10^-3, 10^-2, ...
-    ax.set_yticks([0.001, 0.01, 0.1, 1, 10, 100])
-    ax.set_yticklabels(["1 ms", "10 ms", "0.1 s", "1 s", "10 s", "100 s"])
+    # Human-readable y-tick labels for the chosen quantity.
+    ax.set_yticks(ycfg["y_ticks"])
+    ax.set_yticklabels(ycfg["y_tick_labels"])
 
     ax.grid(True, which="major", color="#E0E0E0", lw=0.7, zorder=0)
     ax.legend(loc="lower right", framealpha=0.9, edgecolor="#E0E0E0",

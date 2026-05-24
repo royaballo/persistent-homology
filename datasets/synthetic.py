@@ -39,10 +39,11 @@ def make_circle(n=30, sigma=0.05, seed=0):
 
 
 def make_sphere(n=100, sigma=0.02, seed=0):
-    """Sample the unit sphere S^2 using a Fibonacci spiral.
+    """Sample the unit sphere S^2 by normalising Gaussian vectors.
 
-    The Fibonacci spiral spreads points almost uniformly over the sphere;
-    a small Gaussian perturbation is added.
+    Each point is obtained by drawing z ~ N(0, I_3) and projecting it
+    onto the sphere via x = z / ||z||. This yields the uniform
+    distribution on S^2. A small Gaussian perturbation is then added.
 
     Parameters
     ----------
@@ -51,22 +52,16 @@ def make_sphere(n=100, sigma=0.02, seed=0):
     sigma : float
         Standard deviation of the additive Gaussian noise.
     seed : int
-        Random seed for the perturbation.
+        Random seed for reproducibility.
 
     Returns
     -------
     points : ndarray of shape (n, 3)
     """
-    indices = np.arange(n, dtype=float) + 0.5
-    phi = np.arccos(1 - 2 * indices / n)
-    theta = np.pi * (1 + 5 ** 0.5) * indices
-    pts = np.column_stack([
-        np.sin(phi) * np.cos(theta),
-        np.sin(phi) * np.sin(theta),
-        np.cos(phi),
-    ])
     rng = np.random.default_rng(seed)
-    return pts + sigma * rng.standard_normal(pts.shape)
+    z = rng.standard_normal((n, 3))
+    pts = z / np.linalg.norm(z, axis=1, keepdims=True)
+    return pts + sigma * rng.standard_normal((n, 3))
 
 
 def make_torus(n_u=20, n_v=5, R=3.0, r=1.0, sigma=0.02, seed=0):

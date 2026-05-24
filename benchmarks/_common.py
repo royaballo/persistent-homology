@@ -123,7 +123,7 @@ def time_ripser(points, max_dim, max_eps):
 def measure_memory_ours(points, max_dim, max_eps, algorithm):
     """Measure the peak memory of our pipeline, in MB.
 
-    Uses :mod:`tracemalloc`, which captures Python-level allocations only;
+    Uses :mod:'tracemalloc', which captures Python-level allocations only;
     this matches what our pure-Python pipeline consumes. Garbage
     collection is forced beforehand to ensure a clean baseline.
 
@@ -160,7 +160,7 @@ def safe_run_timed(label, fn, *args, timeout_s=TIMEOUT_SECONDS):
     label : str
         Short name printed alongside the result.
     fn : callable
-        A timing function such as :func:`time_ours`; it must return a
+        A timing function such as :func:'time_ours'; it must return a
         "(time, count)" pair.
     *args
         Positional arguments forwarded to "fn".

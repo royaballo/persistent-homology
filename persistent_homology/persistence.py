@@ -87,6 +87,7 @@ def compute_persistence(points, max_dim=2, max_eps=np.inf,
         If "algorithm" is not one of the three recognised values.
     """
     filt = vr_filtration(points, max_dim, max_eps)
+    print(f"Filtration built with {len(filt)} simplices.")
 
     if algorithm == 'cohomology':
         pairs = reduce_pcoh(filt)

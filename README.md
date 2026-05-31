@@ -1,76 +1,211 @@
 # Persistent Homology
 
-A pedagogical, from-scratch implementation of persistent homology for
-Vietoris-Rips filtrations, developed as the computational component of an
-MSc thesis.
+A from-scratch, readable implementation of persistent homology for
+Vietoris–Rips filtrations, written as the computational half of an MSc thesis
+in Topological Data Analysis.
 
-<!-- TODO: one or two sentences describing the project and linking to the thesis PDF. -->
+The point of this code is not to be fast. Production libraries like Ripser and
+GUDHI already are, and they are very hard to read. The point is the opposite:
+every function here lines up with a definition or an algorithm from the thesis,
+so that someone can follow the path from "a point cloud" to "a persistence
+diagram" without taking any step on faith. Where there was a choice between a
+clever trick and a transparent one, the transparent one won.
 
-## Overview
+> The accompanying thesis (theory, proofs, benchmarks, and the protein case
+> study) lives in `thesis.pdf`. <!-- TODO: drop the PDF in the repo root or fix this path. -->
 
-<!-- TODO: describe what the code does:
-     - builds the Vietoris-Rips filtration of a point cloud
-     - computes persistent homology via three reduction strategies:
-       standard, clearing, and cohomology (pCoh)
-     - verified for correctness against Ripser and GUDHI
-     Mention that the goal is clarity and a close correspondence with the
-     theory, not production-grade performance. -->
+## What it does
+
+Given a finite point cloud, the pipeline:
+
+1. **Builds the Vietoris–Rips filtration** up to a chosen dimension and scale.
+   VR is the only filtration the code implements; Čech and Alpha are discussed
+   in the thesis as context but are not built here.
+2. **Assembles the combined boundary matrix** over $\mathbb{Z}/2\mathbb{Z}$,
+   stored sparsely as columns of row indices.
+3. **Reduces it** by one of three interchangeable strategies, and reads off the
+   birth–death pairs.
+4. **Returns persistence diagrams** per dimension, ready to plot as diagrams or
+   barcodes.
+
+The three reduction strategies are the heart of the project, and you can switch
+between them with a single argument:
+
+| Strategy      | What it is                                                        | Where it shines |
+|---------------|-------------------------------------------------------------------|-----------------|
+| `standard`    | Plain left-to-right column reduction (Zomorodian–Carlsson)        | The baseline; easiest to read |
+| `clearing`    | Standard reduction, but births in dimension *k* are zeroed once dimension *k+1* is done | Skips a lot of wasted work in high dimensions |
+| `cohomology`  | Reduces the anti-transpose instead (pCoh, de Silva–Morozov–Vejdemo-Johansson) | Much shorter columns on VR complexes; usually the fastest of the three |
+
+All three return the *same* diagram — that is the whole content of the duality
+results, and the test suite checks it explicitly on every dataset.
 
 ## Installation
 
 ```bash
-git clone https://github.com/<username>/persistent-homology.git
+git clone https://github.com/royaballo/persistent-homology.git
 cd persistent-homology
 pip install -e .
 ```
 
-<!-- TODO: if you turn the project into an installable package, document
-     `pip install -e .` here instead. -->
+That installs the `persistent_homology` package in editable mode along with its
+dependencies (NumPy, SciPy, Matplotlib; `ripser` and `gudhi` are pulled in for
+the correctness tests and benchmarks). Python 3.11+ is expected.
 
-## Usage
-
-<!-- TODO: a minimal, runnable example, e.g.:
+## A first example
 
 ```python
 from persistent_homology.persistence import compute_persistence
 from datasets.synthetic import make_circle
 
-points = make_circle(n=30)
-diagram = compute_persistence(points, max_dim=2, max_eps=2.0,
-                              algorithm='cohomology')
-```
--->
+# 30 points sampled on a noisy circle
+points = make_circle(n=30, noise=0.05)
 
-## Repository Structure
+# one long-lived H1 class is the circle's hole
+diagram = compute_persistence(
+    points,
+    max_dim=2,
+    max_eps=2.0,
+    algorithm="cohomology",   # or "standard", "clearing"
+)
 
-```
-persistent_homology/   core implementation
-    filtration.py          Vietoris-Rips complex construction
-    boundary.py            boundary and coboundary matrices
-    reduction.py           standard, clearing, and cohomology reductions
-    persistence.py         end-to-end entry point
-tests/                     correctness tests (pytest)
-datasets/                  synthetic dataset generators
-benchmarks/                performance benchmarking scripts
-notebooks/                 verification and result notebooks
-figures/                   generated figures (not tracked)
+for dim, dgm in diagram.items():
+    print(f"H{dim}: {len(dgm)} features")
 ```
 
-## Reproducing the Thesis Results
+To see it rather than read it:
 
-<!-- TODO: explain how to regenerate the tables and figures of the
-     experimental chapter, e.g. which benchmark scripts to run and in
-     what order. -->
+```python
+from persistent_homology.plotting import plot_diagram, plot_barcode
+
+plot_diagram(diagram)   # birth–death scatter
+plot_barcode(diagram)   # the same data as intervals
+```
+
+The circle gives one point sitting well above the diagonal in $H_1$ (the hole)
+and a cloud of short-lived noise near it. That gap between signal and noise is
+the thing persistent homology is for.
+
+## Repository structure
+
+```
+persistent_homology/      the actual library
+    filtration.py             Vietoris–Rips construction (flag complex from the 1-skeleton)
+    boundary.py               boundary and coboundary matrices over Z/2Z
+    reduction.py              standard, clearing, and cohomology (pCoh) reductions
+    persistence.py            end-to-end entry point: points in, diagrams out
+    plotting.py               diagrams and barcodes
+
+datasets/
+    synthetic.py              circle, sphere, torus, cube samplers (known topology)
+    proteins.py               loads Cα coordinates from PDB files
+
+tests/
+    test_correctness.py       checks our diagrams against Ripser and GUDHI
+
+benchmarks/                   timing and memory scripts; results land in benchmarks/results/
+applications/                 the protein case study (analyse_proteins.py, benchmark_lysozyme.py)
+notebooks/                    correctness, benchmark, and protein analysis walkthroughs
+data/proteins/                PDB files, extracted Cα coordinates, and computed diagrams
+figures/                      generated plots (regenerated by the scripts; not meant to be edited by hand)
+```
+
+If you only want to understand the method, read `filtration.py`, then
+`boundary.py`, then `reduction.py`, in that order. They mirror the thesis
+chapter on algorithms section by section.
+
+## How the thesis was built, in order
+
+The work went in five steps, and the repository is laid out so that each one can
+be re-run on its own.
+
+**1. Implement the pipeline.** Build the VR filtration, the boundary matrices,
+and the three reductions — the `persistent_homology/` package. The guiding rule
+was a one-to-one match between code and theory rather than speed.
+
+**2. Prove it is correct.** Before any benchmark means anything, the output has
+to be right. `tests/test_correctness.py` runs our three algorithms on the
+synthetic datasets and on small random complexes, and checks that the diagrams
+agree with both Ripser and GUDHI up to the usual reordering. The
+`correctness_verification.ipynb` notebook shows this in a readable form.
+
+**3. Benchmark it.** With correctness settled, the `benchmarks/` scripts measure
+how the three strategies scale. `computation_time.py` and `memory_usage.py`
+sweep dataset size on circle, sphere, torus, and cube; `effect_filtration_scope.py`
+isolates how much capping the homology dimension actually saves. Fitted scaling
+exponents are written to `benchmarks/results/`.
+
+**4. Put it to work on real data.** The protein case study in `applications/`
+asks a concrete question: can persistent homology pick out structural features
+of proteins straight from their Cα atomic coordinates, with no
+chemistry-specific input? It runs on three PDB structures (hemoglobin `1A3N`,
+lysozyme `1AKI`, GFP `1EMA`), computes $H_0$, $H_1$, $H_2$ diagrams, and tallies
+the resulting Betti counts.
+
+**5. Write it up.** The thesis ties the theory, the correctness evidence, the
+scaling results, and the protein study together. The notebooks are the bridge:
+they regenerate every figure the thesis uses.
+
+## Reproducing the results
+
+Each step is one command. Run them from the repository root.
+
+```bash
+# correctness — should report all-pass against Ripser and GUDHI
+pytest
+
+# timing and memory across synthetic datasets (writes CSVs to benchmarks/results/)
+python benchmarks/computation_time.py
+python benchmarks/memory_usage.py
+python benchmarks/effect_filtration_scope.py
+
+# protein case study (writes diagrams to data/proteins/results/ and plots to figures/)
+python applications/analyse_proteins.py
+python applications/benchmark_lysozyme.py
+```
+
+The three notebooks in `notebooks/` read the CSVs and `.npy` diagrams produced
+above and assemble the figures and tables exactly as they appear in the thesis.
+Run the scripts first, then the notebooks.
+
+A note on figures: everything in `figures/` is generated. Delete the folder and
+re-run the scripts and you should get it back byte-for-byte, give or take
+matplotlib versions.
+
+## What the results say
+
+The short version, with the detail left for the thesis:
+
+- **The three algorithms agree, always.** This is the duality between homology
+  and cohomology made concrete: same pairs, birth and death simplices swapped.
+- **Empirical scaling sits well below the cubic worst case.** On the synthetic
+  datasets the fitted exponents come out far smaller than the $O(m^3)$ bound,
+  because the boundary matrices are sparse and pivot conflicts are rare. The
+  cohomology route is the quickest, since coboundary columns on VR complexes are
+  short.
+- **Capping the dimension matters.** Most of the simplices, and most of the
+  cost, live in the top dimensions; not computing homology you do not need is
+  the cheapest optimisation available.
+- **The topology of the proteins is legible.** The persistence diagrams pick out
+  components, loops, and voids straight from the coordinates — encouraging for
+  topology as a coordinate-free structural descriptor, though this is a small
+  proof-of-concept and the thesis is careful about not overclaiming.
 
 ## References
 
-<!-- TODO: list the key papers, e.g.:
-     - Zomorodian & Carlsson, Computing persistent homology (2005)
-     - de Silva, Morozov & Vejdemo-Johansson, Dualities in persistent
-       (co)homology (2011)
-     - Bauer, Ripser (2021)
--->
+The algorithms and theory come mainly from:
+
+- H. Edelsbrunner, D. Letscher, A. Zomorodian. *Topological persistence and
+  simplification* (2002).
+- A. Zomorodian, G. Carlsson. *Computing persistent homology* (2005).
+- V. de Silva, D. Morozov, M. Vejdemo-Johansson. *Dualities in persistent
+  (co)homology* (2011).
+- U. Bauer. *Ripser: efficient computation of Vietoris–Rips persistence
+  barcodes* (2021).
+- C. Maria et al. *The GUDHI library* (2014).
+
+Full citations are in the thesis bibliography.
 
 ## License
 
-This project is released under the MIT License. See [LICENSE](LICENSE).
+Released under the MIT License. See [LICENSE](LICENSE).

@@ -9,11 +9,7 @@ import numpy as np
 
 from .boundary import build_boundary_matrix
 from .filtration import vr_filtration
-from .reduction import (
-    reduce_pcoh,
-    reduce_standard,
-    reduce_with_clearing,
-)
+from .reduction import reduce_pcoh, reduce_standard, reduce_with_clearing
 
 
 def extract_diagram(pairs, filtration):

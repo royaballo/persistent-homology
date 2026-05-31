@@ -8,7 +8,8 @@ of points whose pairwise distances all fall below a threshold.
 from itertools import combinations
 
 import numpy as np
-from scipy.spatial.distance import pdist, squareform  # type: ignore[import-untyped]
+from scipy.spatial.distance import pdist  # type: ignore[import-untyped]
+from scipy.spatial.distance import squareform
 
 
 def vr_filtration(points, max_dim=2, max_eps=np.inf):

@@ -6,19 +6,21 @@ and an optional list of annotations highlights dataset-specific features
 (the loop of a circle, the void of a sphere, and so on).
 """
 
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches  # type: ignore[import-untyped]
+import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 
 # Graph parameters.
-plt.rcParams.update({
-    "font.family": "serif",
-    "axes.labelsize": 14,
-    "font.size": 13,
-    "legend.fontsize": 12,
-    "xtick.labelsize": 12,
-    "ytick.labelsize": 12,
-    "figure.titlesize": 16,
-})
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        "axes.labelsize": 14,
+        "font.size": 13,
+        "legend.fontsize": 12,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "figure.titlesize": 16,
+    }
+)
 
 DIM_COLOR = {0: "#1565C0", 1: "#C62828", 2: "#2E7D32"}
 DIM_LABEL = {0: r"$H_0$", 1: r"$H_1$", 2: r"$H_2$"}
@@ -31,8 +33,9 @@ def proxy_infinity(diagram, margin=1.12):
     Essential features have an infinite death and cannot be plotted at
     their true ordinate; they are drawn at this proxy height instead.
     """
-    finites = [d for intervals in diagram.values()
-               for (_, d) in intervals if d != float("inf")]
+    finites = [
+        d for intervals in diagram.values() for (_, d) in intervals if d != float("inf")
+    ]
     return max(finites) * margin if finites else 1.0
 
 
@@ -46,8 +49,10 @@ def ripser_to_diagram(result):
 
 # Persistence diagram
 
-def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
-                             title=None, ax=None, savepath=None):
+
+def plot_persistence_diagram(
+    diagram, max_dim=2, annotations=None, title=None, ax=None, savepath=None
+):
     """Draw a persistence diagram.
 
     Parameters
@@ -80,8 +85,9 @@ def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
     # Diagonal and the infinity line.
     ax.plot([0, lim], [0, lim], "--", color="#9E9E9E", lw=1.0, zorder=1)
     ax.axhline(proxy, color="#9E9E9E", lw=0.8, ls=":", alpha=0.6)
-    ax.text(lim * 0.01, proxy * 1.01, r"$\infty$",
-            color="#9E9E9E", fontsize=13, va="bottom")
+    ax.text(
+        lim * 0.01, proxy * 1.01, r"$\infty$", color="#9E9E9E", fontsize=13, va="bottom"
+    )
 
     # Scatter points, one colour per dimension. Finite features are drawn
     # as circles; essential features as triangles at the proxy height.
@@ -92,20 +98,35 @@ def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
             continue
         color = DIM_COLOR[dim]
         births_f, deaths_f, births_i = [], [], []
-        for (b, d) in intervals:
+        for b, d in intervals:
             if d == float("inf"):
                 births_i.append(b)
             else:
                 births_f.append(b)
                 deaths_f.append(d)
         if births_f:
-            ax.scatter(births_f, deaths_f, c=color, s=60, marker="o",
-                       zorder=4, linewidths=0, alpha=0.85)
+            ax.scatter(
+                births_f,
+                deaths_f,
+                c=color,
+                s=60,
+                marker="o",
+                zorder=4,
+                linewidths=0,
+                alpha=0.85,
+            )
         if births_i:
-            ax.scatter(births_i, [proxy] * len(births_i), c=color, s=80,
-                       marker="^", zorder=4, linewidths=0, alpha=0.90)
-        legend_handles.append(mpatches.Patch(color=color,
-                                             label=DIM_LABEL[dim]))
+            ax.scatter(
+                births_i,
+                [proxy] * len(births_i),
+                c=color,
+                s=80,
+                marker="^",
+                zorder=4,
+                linewidths=0,
+                alpha=0.90,
+            )
+        legend_handles.append(mpatches.Patch(color=color, label=DIM_LABEL[dim]))
 
     # Optional dataset-specific annotations.
     for ann in annotations or []:
@@ -113,15 +134,21 @@ def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
         color = DIM_COLOR[dim]
         xy = ann["xy"]
         xytext = ann.get("xytext", (xy[0] + lim * 0.18, xy[1] - lim * 0.15))
-        ax.annotate(ann["text"], xy=xy, xytext=xytext,
-                    fontsize=11, color=color,
-                    arrowprops=dict(arrowstyle="->", color=color,
-                                    lw=1.0, mutation_scale=10),
-                    bbox=dict(boxstyle="round,pad=0.25", fc="white",
-                              ec=color, alpha=0.85, lw=0.9))
+        ax.annotate(
+            ann["text"],
+            xy=xy,
+            xytext=xytext,
+            fontsize=11,
+            color=color,
+            arrowprops=dict(arrowstyle="->", color=color, lw=1.0, mutation_scale=10),
+            bbox=dict(
+                boxstyle="round,pad=0.25", fc="white", ec=color, alpha=0.85, lw=0.9
+            ),
+        )
 
-    ax.legend(handles=legend_handles, loc="lower right",
-              framealpha=0.85, edgecolor="#E0E0E0")
+    ax.legend(
+        handles=legend_handles, loc="lower right", framealpha=0.85, edgecolor="#E0E0E0"
+    )
     ax.set_xlabel("Birth")
     ax.set_ylabel("Death")
     ax.set_xlim(-lim * 0.04, lim)
@@ -144,20 +171,29 @@ def plot_persistence_diagram(diagram, max_dim=2, annotations=None,
 # Fixed visual style per method: our three implementations in blues,
 # GUDHI in orange, Ripser in green.
 METHOD_STYLE = {
-    "our_standard": {"label": "Our standard", "color": "#1565C0",
-                     "marker": "o", "linestyle": "-"},
-    "our_clearing": {"label": "Our clearing", "color": "#42A5F5",
-                     "marker": "s", "linestyle": "--"},
-    "our_cohomology": {"label": "Our cohomology", "color": "#0D47A1",
-                       "marker": "^", "linestyle": ":"},
-    "GUDHI": {"label": "GUDHI", "color": "#E65100",
-              "marker": "D", "linestyle": "-"},
-    "Ripser": {"label": "Ripser", "color": "#2E7D32",
-               "marker": "*", "linestyle": "-"},
+    "our_standard": {
+        "label": "Standard",
+        "color": "#1565C0",
+        "marker": "o",
+        "linestyle": "-",
+    },
+    "our_clearing": {
+        "label": "Clearing",
+        "color": "#42A5F5",
+        "marker": "s",
+        "linestyle": "--",
+    },
+    "our_cohomology": {
+        "label": "Cohomology",
+        "color": "#0D47A1",
+        "marker": "^",
+        "linestyle": ":",
+    },
+    "GUDHI": {"label": "GUDHI", "color": "#E65100", "marker": "D", "linestyle": "-"},
+    "Ripser": {"label": "Ripser", "color": "#2E7D32", "marker": "*", "linestyle": "-"},
 }
 
-METHOD_ORDER = ["our_standard", "our_clearing", "our_cohomology",
-                "GUDHI", "Ripser"]
+METHOD_ORDER = ["our_standard", "our_clearing", "our_cohomology", "GUDHI", "Ripser"]
 
 
 # Per-quantity y-axis configuration.
@@ -193,9 +229,17 @@ _XAXIS_CONFIG = {
 }
 
 
-def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
-                        x_col=None, y_col=None, method_col="method",
-                        title=None, savepath=None):
+def plot_loglog_scaling(
+    df,
+    quantity="time",
+    xaxis="n",
+    exponents=None,
+    x_col=None,
+    y_col=None,
+    method_col="method",
+    title=None,
+    savepath=None,
+):
     """Log-log plot of a scaling quantity against a chosen x-axis.
 
     Supports two y-axes ("quantity='time'" or "'memory'") and two
@@ -239,8 +283,7 @@ def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
         )
     if xaxis not in _XAXIS_CONFIG:
         raise ValueError(
-            f"unknown xaxis {xaxis!r}; "
-            f"expected one of {list(_XAXIS_CONFIG)}"
+            f"unknown xaxis {xaxis!r}; " f"expected one of {list(_XAXIS_CONFIG)}"
         )
     ycfg = _QUANTITY_CONFIG[quantity]
     xcfg = _XAXIS_CONFIG[xaxis]
@@ -252,8 +295,7 @@ def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
     _, ax = plt.subplots(figsize=(9, 6))
 
     # Plot methods in a fixed order, so the legend is always consistent.
-    methods_present = [m for m in METHOD_ORDER
-                       if m in df[method_col].unique()]
+    methods_present = [m for m in METHOD_ORDER if m in df[method_col].unique()]
     for method in methods_present:
         group = df[df[method_col] == method].sort_values(x_col)
         # Drop rows where the measurement is missing (e.g. MemoryError).
@@ -265,18 +307,32 @@ def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
         label = style["label"]
         # Exponent annotations only make sense for size scaling.
         if exponents and method in exponents and xcfg["exponent_var"]:
-            label = f"{label}  (${xcfg['exponent_var']}^{{{exponents[method]:.2f}}}$)"
+            entry = exponents[method]
+            if isinstance(entry, tuple):
+                slope, stderr = entry
+                if stderr == stderr:  # not NaN
+                    label = (
+                        f"{label}  (${xcfg['exponent_var']}"
+                        f"^{{{slope:.2f} \\pm {stderr:.2f}}}$)"
+                    )
+                else:
+                    label = f"{label}  (${xcfg['exponent_var']}" f"^{{{slope:.2f}}}$)"
+            else:
+                label = f"{label}  (${xcfg['exponent_var']}" f"^{{{entry:.2f}}}$)"
 
-        ax.plot(group[x_col], group[y_col],
-                label=label,
-                color=style["color"],
-                marker=style["marker"],
-                markersize=8,
-                linestyle=style["linestyle"],
-                linewidth=1.8,
-                markeredgecolor="white",
-                markeredgewidth=0.5,
-                alpha=0.95)
+        ax.plot(
+            group[x_col],
+            group[y_col],
+            label=label,
+            color=style["color"],
+            marker=style["marker"],
+            markersize=8,
+            linestyle=style["linestyle"],
+            linewidth=1.8,
+            markeredgecolor="white",
+            markeredgewidth=0.5,
+            alpha=0.95,
+        )
 
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -298,8 +354,7 @@ def plot_loglog_scaling(df, quantity="time", xaxis="n", exponents=None,
     ax.set_yticklabels(ycfg["y_tick_labels"])
 
     ax.grid(True, which="major", color="#E0E0E0", lw=0.7, zorder=0)
-    ax.legend(loc="lower right", framealpha=0.9, edgecolor="#E0E0E0",
-              handlelength=2.4)
+    ax.legend(loc="lower right", framealpha=0.9, edgecolor="#E0E0E0", handlelength=2.4)
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
     if title:

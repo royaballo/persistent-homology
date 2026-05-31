@@ -7,13 +7,9 @@ exposed through the single entry point :func:`compute_persistence`.
 
 from .boundary import build_boundary_matrix
 from .filtration import vr_filtration
-from .persistence import extract_diagram, compute_persistence
-from .reduction import (
-    add_columns_z2,
-    reduce_pcoh,
-    reduce_standard,
-    reduce_with_clearing,
-)
+from .persistence import compute_persistence, extract_diagram
+from .reduction import (add_columns_z2, reduce_pcoh, reduce_standard,
+                        reduce_with_clearing)
 
 __all__ = [
     "compute_persistence",

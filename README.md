@@ -11,9 +11,6 @@ so that someone can follow the path from "a point cloud" to "a persistence
 diagram" without taking any step on faith. Where there was a choice between a
 clever trick and a transparent one, the transparent one won.
 
-> The accompanying thesis (theory, proofs, benchmarks, and the protein case
-> study) lives in `thesis.pdf`. <!-- TODO: drop the PDF in the repo root or fix this path. -->
-
 ## What it does
 
 Given a finite point cloud, the pipeline:
@@ -25,8 +22,8 @@ Given a finite point cloud, the pipeline:
    stored sparsely as columns of row indices.
 3. **Reduces it** by one of three interchangeable strategies, and reads off the
    birth–death pairs.
-4. **Returns persistence diagrams** per dimension, ready to plot as diagrams or
-   barcodes.
+4. **Returns persistence diagrams** per dimension, as `{dimension: [(birth,
+   death), ...]}`, ready to plot.
 
 The three reduction strategies are the heart of the project, and you can switch
 between them with a single argument:
@@ -76,15 +73,16 @@ for dim, dgm in diagram.items():
 To see it rather than read it:
 
 ```python
-from persistent_homology.plotting import plot_diagram, plot_barcode
+from persistent_homology.plotting import plot_persistence_diagram
 
-plot_diagram(diagram)   # birth–death scatter
-plot_barcode(diagram)   # the same data as intervals
+plot_persistence_diagram(diagram, max_dim=2)
 ```
 
 The circle gives one point sitting well above the diagonal in $H_1$ (the hole)
 and a cloud of short-lived noise near it. That gap between signal and noise is
-the thing persistent homology is for.
+the thing persistent homology is for. Essential features — the ones that never
+die — are drawn as triangles along a dashed `∞` line near the top, since their
+true death is infinite and cannot be placed on the axis.
 
 ## Repository structure
 
@@ -94,7 +92,7 @@ persistent_homology/      the actual library
     boundary.py               boundary and coboundary matrices over Z/2Z
     reduction.py              standard, clearing, and cohomology (pCoh) reductions
     persistence.py            end-to-end entry point: points in, diagrams out
-    plotting.py               diagrams and barcodes
+    plotting.py               persistence diagrams (and the log-log benchmark plots)
 
 datasets/
     synthetic.py              circle, sphere, torus, cube samplers (known topology)
@@ -151,7 +149,7 @@ they regenerate every figure the thesis uses.
 Each step is one command. Run them from the repository root.
 
 ```bash
-# correctness — should report all-pass against Ripser and GUDHI
+# correctness: should report all-pass against Ripser and GUDHI
 pytest
 
 # timing and memory across synthetic datasets (writes CSVs to benchmarks/results/)
@@ -187,7 +185,7 @@ The short version, with the detail left for the thesis:
   cost, live in the top dimensions; not computing homology you do not need is
   the cheapest optimisation available.
 - **The topology of the proteins is legible.** The persistence diagrams pick out
-  components, loops, and voids straight from the coordinates — encouraging for
+  components, loops, and voids straight from the coordinates, encouraging for
   topology as a coordinate-free structural descriptor, though this is a small
   proof-of-concept and the thesis is careful about not overclaiming.
 

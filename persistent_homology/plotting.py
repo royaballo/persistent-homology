@@ -354,7 +354,7 @@ def plot_loglog_scaling(
     ax.set_yticklabels(ycfg["y_tick_labels"])
 
     ax.grid(True, which="major", color="#E0E0E0", lw=0.7, zorder=0)
-    ax.legend(loc="lower right", framealpha=0.9, edgecolor="#E0E0E0", handlelength=2.4)
+    ax.legend(loc="best", framealpha=0.9, edgecolor="#E0E0E0", handlelength=2.4)
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
     if title:

@@ -8,30 +8,45 @@ version = "0.1.0"
 description = "A from-scratch implementation of persistent homology for Vietoris-Rips filtrations."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "MIT" }   # modern form (setuptools>=77): license = "MIT" + license-files = ["LICENSE"]
 authors = [
-    { name = "Roy Aballo", email = "abalo.g.roy@aims-senegal.org"},
+    { name = "Roy Aballo", email = "abalo.g.roy@aims-senegal.org" },
+]
+keywords = ["persistent homology", "topological data analysis", "Vietoris-Rips", "TDA", "algebraic topology"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Intended Audience :: Science/Research",
 ]
 
+# Core runtime deps only — what someone needs to compute persistence on their own data.
 dependencies = [
-    "numpy>=2.1",
+    "numpy>=2.0",
     "scipy>=1.15",
     "matplotlib>=3.8",
     "pandas>=2.0",
-    "ripser>=0.6.14",
-    "gudhi>=3.11.0",
-    "biopython>=1.85",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-]
+dev = ["pytest>=8.0"]
+# Reference libraries used to validate/benchmark your from-scratch output.
+benchmark = ["ripser>=0.6.14", "gudhi>=3.11.0"]
+# Needed only for the biological dataset loaders (import Bio lazily inside them).
+bio = ["biopython>=1.85"]
+
+[project.urls]
+Homepage = "https://github.com/royaballo/persistent-homology"
+Repository = "https://github.com/royaballo/persistent-homology"
+Issues = "https://github.com/royaballo/persistent-homology/issues"
 
 [tool.setuptools]
-# Both the core package and the dataset package are importable once
-# the project is installed with `pip install -e .`.
-packages = ["persistent_homology", "datasets"]
+packages = ["persistent_homology", "persistent_homology.datasets"]
+
+[tool.setuptools.package-data]
+# Ship the actual data files (adjust globs to your real extensions).
+"persistent_homology.datasets" = ["*.csv", "*.fasta", "*.txt", "*.npy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

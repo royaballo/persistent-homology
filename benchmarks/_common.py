@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd  # type: ignore[import-untyped]
 
-from datasets.synthetic import make_circle, make_cube, make_sphere, make_torus
+from persistent_homology.datasets.synthetic import make_circle, make_cube, make_sphere, make_torus
 from persistent_homology import compute_persistence
 
 # Reference libraries.

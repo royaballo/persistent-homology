@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "persistent-homology"
-version = "0.1.1"
+version = "0.1.2"
 description = "A from-scratch implementation of persistent homology for Vietoris-Rips filtrations."
 readme = "README.md"
 requires-python = ">=3.10"

@@ -16,14 +16,14 @@ Expected topology:
 import numpy as np
 
 
-def make_circle(n=30, sigma=0.05, seed=0):
+def make_circle(n=30, noise=0.05, seed=0):
     """Sample a noisy unit circle in R^2.
 
     Parameters
     ----------
     n : int
         Number of points.
-    sigma : float
+    noise : float
         Standard deviation of the additive Gaussian noise.
     seed : int
         Random seed for reproducibility.
@@ -35,10 +35,10 @@ def make_circle(n=30, sigma=0.05, seed=0):
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, 2 * np.pi, n)
     pts = np.column_stack([np.cos(theta), np.sin(theta)])
-    return pts + sigma * rng.standard_normal((n, 2))
+    return pts + noise * rng.standard_normal((n, 2))
 
 
-def make_sphere(n=100, sigma=0.02, seed=0):
+def make_sphere(n=100, noise=0.02, seed=0):
     """Sample the unit sphere S^2 by normalising Gaussian vectors.
 
     Each point is obtained by drawing z ~ N(0, I_3) and projecting it
@@ -49,7 +49,7 @@ def make_sphere(n=100, sigma=0.02, seed=0):
     ----------
     n : int
         Number of points.
-    sigma : float
+    noise : float
         Standard deviation of the additive Gaussian noise.
     seed : int
         Random seed for reproducibility.
@@ -61,10 +61,10 @@ def make_sphere(n=100, sigma=0.02, seed=0):
     rng = np.random.default_rng(seed)
     z = rng.standard_normal((n, 3))
     pts = z / np.linalg.norm(z, axis=1, keepdims=True)
-    return pts + sigma * rng.standard_normal((n, 3))
+    return pts + noise * rng.standard_normal((n, 3))
 
 
-def make_torus(n_u=20, n_v=5, R=3.0, r=1.0, sigma=0.02, seed=0):
+def make_torus(n_u=20, n_v=5, R=3.0, r=1.0, noise=0.02, seed=0):
     """Sample the torus T^2 on a regular grid.
 
     Points are placed on a regular "n_u" by "n_v" grid in the two
@@ -80,7 +80,7 @@ def make_torus(n_u=20, n_v=5, R=3.0, r=1.0, sigma=0.02, seed=0):
         Major radius.
     r : float
         Minor radius.
-    sigma : float
+    noise : float
         Standard deviation of the additive Gaussian noise.
     seed : int
         Random seed for the perturbation.
@@ -98,7 +98,7 @@ def make_torus(n_u=20, n_v=5, R=3.0, r=1.0, sigma=0.02, seed=0):
         (r * np.sin(V)).flatten(),
     ])
     rng = np.random.default_rng(seed)
-    return pts + sigma * rng.standard_normal(pts.shape)
+    return pts + noise * rng.standard_normal(pts.shape)
 
 
 def make_cube(n=100, seed=0):

@@ -5,11 +5,18 @@ filtration of a point cloud, applies the requested reduction strategy,
 and returns the resulting persistence diagram.
 """
 
+import logging
+
 import numpy as np
 
 from .boundary import build_boundary_matrix
 from .filtration import vr_filtration
 from .reduction import reduce_pcoh, reduce_standard, reduce_with_clearing
+from .validation import (validate_algorithm, validate_max_dim,
+                         validate_max_eps, validate_point_cloud)
+
+
+logger = logging.getLogger(__name__)
 
 
 def extract_diagram(pairs, filtration):
@@ -30,7 +37,26 @@ def extract_diagram(pairs, filtration):
     diagram : dict
         Maps each dimension to a list of "(birth_value, death_value)"
         pairs. Infinite intervals use "float('inf')" as the death value.
+
+    Raises
+    ------
+    IndexError
+        If a pair refers to a position outside the filtration, which
+        means the pairs and the filtration do not belong together.
     """
+    m = len(filtration)
+
+    # Pairs and filtration must come from the same computation. Catching a
+    # stray index here gives a diagnosable error instead of a bare
+    # IndexError from deep inside the loop below.
+    for (birth_idx, death_idx) in pairs:
+        if not (0 <= birth_idx < m and 0 <= death_idx < m):
+            raise IndexError(
+                f"persistence pair ({birth_idx}, {death_idx}) falls outside "
+                f"the filtration, which holds {m} simplices. The pairs and "
+                "the filtration must come from the same computation."
+            )
+
     diagram = {}
 
     # Indices that appear as births or deaths in some pair
@@ -64,36 +90,61 @@ def compute_persistence(points, max_dim=2, max_eps=np.inf,
     Parameters
     ----------
     points : ndarray of shape (n, d)
-        The input point cloud.
+        The input point cloud. Must hold at least two points and contain
+        no NaN or infinite values.
     max_dim : int
-        Maximum homology dimension to compute.
+        Maximum homology dimension to compute. Must be non-negative.
     max_eps : float
-        Maximum filtration value.
+        Maximum filtration value. Must be positive; ``numpy.inf`` (the
+        default) leaves the filtration uncapped.
     algorithm : {'standard', 'clearing', 'cohomology'}
-        The reduction strategy to use.
+        The reduction strategy to use. All three return the same diagram;
+        they differ only in cost.
 
     Returns
     -------
     diagram : dict
-        Maps each dimension to a list of "(birth, death)" pairs.
+        Maps each dimension to a list of "(birth, death)" pairs. Essential
+        features carry ``float('inf')`` as their death value.
 
     Raises
     ------
+    TypeError
+        If any argument has the wrong type.
     ValueError
-        If "algorithm" is not one of the three recognised values.
+        If ``points`` is not a valid 2D point cloud, if ``max_dim`` is
+        negative, if ``max_eps`` is not positive, or if ``algorithm`` is
+        not one of the three recognised values.
+
+    Warns
+    -----
+    FiltrationSizeWarning
+        If the filtration is large enough to risk exhausting memory.
+
+    Examples
+    --------
+    >>> from persistent_homology.datasets.synthetic import make_circle
+    >>> pts = make_circle(n=30, noise=0.05)
+    >>> dgm = compute_persistence(pts, max_dim=1, max_eps=2.0)
+    >>> sorted(dgm)
+    [0, 1]
     """
+    # Validate everything before any work is done.
+    points = validate_point_cloud(points)
+    max_dim = validate_max_dim(max_dim)
+    max_eps = validate_max_eps(max_eps)
+    algorithm = validate_algorithm(algorithm)
+
     filt = vr_filtration(points, max_dim, max_eps)
-    print(f"Filtration built with {len(filt)} simplices.")
+    logger.info("Filtration built with %d simplices.", len(filt))
 
     if algorithm == 'cohomology':
         pairs = reduce_pcoh(filt)
     elif algorithm == 'clearing':
         cols = build_boundary_matrix(filt)
         _, pairs = reduce_with_clearing(cols, filt)
-    elif algorithm == 'standard':
+    else:  # 'standard'; the name was validated above
         cols = build_boundary_matrix(filt)
         _, pairs = reduce_standard(cols)
-    else:
-        raise ValueError(f"Unknown algorithm: {algorithm!r}")
 
     return extract_diagram(pairs, filt)

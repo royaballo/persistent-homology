@@ -8,6 +8,7 @@ and an optional list of annotations highlights dataset-specific features
 
 import matplotlib.patches as mpatches  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
+import numpy as np
 
 # Graph parameters.
 plt.rcParams.update(
@@ -22,8 +23,23 @@ plt.rcParams.update(
     }
 )
 
-DIM_COLOR = {0: "#1565C0", 1: "#C62828", 2: "#2E7D32"}
-DIM_LABEL = {0: r"$H_0$", 1: r"$H_1$", 2: r"$H_2$"}
+DIM_COLOR = {0: "#1565C0", 1: "#C62828", 2: "#2E7D32", 3: "#6A1B9A", 4: "#EF6C00"}
+DIM_LABEL = {0: r"$H_0$", 1: r"$H_1$", 2: r"$H_2$", 3: r"$H_3$", 4: r"$H_4$"}
+
+# Fallback palette for dimensions beyond the named ones above.
+_FALLBACK_COLORS = ["#00838F", "#AD1457", "#558B2F", "#4E342E"]
+
+
+def dim_color(dim):
+    """Colour for a homology dimension, cycling beyond the named ones."""
+    if dim in DIM_COLOR:
+        return DIM_COLOR[dim]
+    return _FALLBACK_COLORS[(dim - len(DIM_COLOR)) % len(_FALLBACK_COLORS)]
+
+
+def dim_label(dim):
+    """LaTeX label for a homology dimension."""
+    return DIM_LABEL.get(dim, rf"$H_{{{dim}}}$")
 
 
 # Diagram helpers
@@ -75,7 +91,25 @@ def plot_persistence_diagram(
     Returns
     -------
     ax : matplotlib axis
+
+    Raises
+    ------
+    TypeError
+        If "diagram" is not a dict.
+    ValueError
+        If "max_dim" is negative.
     """
+    if not isinstance(diagram, dict):
+        raise TypeError(
+            "diagram must be a dict mapping each dimension to a list of "
+            f"(birth, death) pairs; got {type(diagram).__name__}. "
+            "This is the format returned by compute_persistence()."
+        )
+    if not isinstance(max_dim, (int, np.integer)) or max_dim < 0:
+        raise ValueError(
+            f"max_dim must be a non-negative integer; got {max_dim!r}."
+        )
+
     if ax is None:
         _, ax = plt.subplots(figsize=(7, 6))
 
@@ -96,7 +130,7 @@ def plot_persistence_diagram(
         intervals = diagram.get(dim, [])
         if not intervals:
             continue
-        color = DIM_COLOR[dim]
+        color = dim_color(dim)
         births_f, deaths_f, births_i = [], [], []
         for b, d in intervals:
             if d == float("inf"):
@@ -126,12 +160,12 @@ def plot_persistence_diagram(
                 linewidths=0,
                 alpha=0.90,
             )
-        legend_handles.append(mpatches.Patch(color=color, label=DIM_LABEL[dim]))
+        legend_handles.append(mpatches.Patch(color=color, label=dim_label(dim)))
 
     # Optional dataset-specific annotations.
     for ann in annotations or []:
         dim = ann.get("dim", 1)
-        color = DIM_COLOR[dim]
+        color = dim_color(dim)
         xy = ann["xy"]
         xytext = ann.get("xytext", (xy[0] + lim * 0.18, xy[1] - lim * 0.15))
         ax.annotate(
@@ -146,9 +180,13 @@ def plot_persistence_diagram(
             ),
         )
 
-    ax.legend(
-        handles=legend_handles, loc="lower right", framealpha=0.85, edgecolor="#E0E0E0"
-    )
+    if legend_handles:
+        ax.legend(
+            handles=legend_handles,
+            loc="lower right",
+            framealpha=0.85,
+            edgecolor="#E0E0E0",
+        )
     ax.set_xlabel("Birth")
     ax.set_ylabel("Death")
     ax.set_xlim(-lim * 0.04, lim)
@@ -291,6 +329,20 @@ def plot_loglog_scaling(
         y_col = ycfg["default_y_col"]
     if x_col is None:
         x_col = xcfg["default_col"]
+
+    missing = [c for c in (x_col, y_col, method_col) if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"the DataFrame is missing the column(s) {missing}; "
+            f"it holds {list(df.columns)}."
+        )
+
+    unknown = set(df[method_col].unique()) - set(METHOD_STYLE)
+    if unknown:
+        raise ValueError(
+            f"unknown method(s) {sorted(unknown)} in column {method_col!r}; "
+            f"expected values from {list(METHOD_STYLE)}."
+        )
 
     _, ax = plt.subplots(figsize=(9, 6))
 

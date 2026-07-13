@@ -80,8 +80,8 @@ pip install -e ".[dev,benchmark,bio]"
 ## A first example
 
 ```python
-from persistent_homology.persistence import compute_persistence
-from persistent_homology.datasets.synthetic import make_circle
+from persistent_homology import compute_persistence, plot_persistence_diagram
+from persistent_homology.datasets import make_circle
 
 # 30 points sampled on a noisy circle
 points = make_circle(n=30, noise=0.05)
@@ -96,12 +96,6 @@ diagram = compute_persistence(
 
 for dim, dgm in diagram.items():
     print(f"H{dim}: {len(dgm)} features")
-```
-
-To see it rather than read it:
-
-```python
-from persistent_homology.plotting import plot_persistence_diagram
 
 plot_persistence_diagram(diagram, max_dim=2)
 ```
@@ -111,6 +105,24 @@ and a cloud of short-lived noise near it. That gap between signal and noise is
 the thing persistent homology is for. Essential features — the ones that never
 die — are drawn as triangles along a dashed `∞` line near the top, since their
 true death is infinite and cannot be placed on the axis.
+
+### On filtration size
+
+Vietoris–Rips filtrations grow combinatorially: 300 points at `max_dim=3` admits
+roughly $3 \times 10^8$ simplices, enough to exhaust memory on most machines.
+Rather than let that run silently, `compute_persistence` raises a
+`FiltrationSizeWarning` **before** any work is done, and rejects invalid
+arguments (a negative `max_eps`, a misspelled `algorithm`, a point cloud with
+NaNs) up front rather than after the filtration has been built.
+
+```python
+import warnings
+from persistent_homology import FiltrationSizeWarning
+
+warnings.simplefilter("error", FiltrationSizeWarning)  # or "ignore"
+```
+
+Setting a finite `max_eps` is the cheapest way to stay out of trouble.
 
 ## Repository structure
 
@@ -125,6 +137,7 @@ persistent_homology/      the installable library
     reduction.py              standard, clearing, and cohomology (pCoh) reductions
     persistence.py            end-to-end entry point: points in, diagrams out
     plotting.py               persistence diagrams (and the log-log benchmark plots)
+    validation.py             input checks and the filtration-size guard rail
     datasets/
         synthetic.py              circle, sphere, torus, cube samplers (known topology)
         proteins.py               loads Cα coordinates from PDB files (needs the [bio] extra)
@@ -143,7 +156,7 @@ If you only want to understand the method, read `filtration.py`, then
 `boundary.py`, then `reduction.py`, in that order. They mirror the thesis
 chapter on algorithms section by section. The dataset samplers live one level
 down in `persistent_homology/datasets/`, so they ship with the package and are
-importable as `persistent_homology.datasets.synthetic` once installed.
+importable as `persistent_homology.datasets` once installed.
 
 ## How the thesis was built, in order
 
@@ -169,7 +182,7 @@ exponents are written to `benchmarks/results/`.
 **4. Put it to work on real data.** The protein case study in `applications/`
 asks a concrete question: can persistent homology pick out structural features
 of proteins straight from their Cα atomic coordinates, with no
-chemistry-specific input? It runs on three PDB structures (hemoglobin `1A3N`,
+chemistry-specific input? It runs on three PDB structures (haemoglobin `1A3N`,
 lysozyme `1AKI`, GFP `1EMA`), computes $H_0$, $H_1$, $H_2$ diagrams, and tallies
 the resulting Betti counts.
 
@@ -224,6 +237,31 @@ The short version, with the detail left for the thesis:
   components, loops, and voids straight from the coordinates, encouraging for
   topology as a coordinate-free structural descriptor, though this is a small
   proof-of-concept and the thesis is careful about not overclaiming.
+
+## Citing
+
+If you use this package in your research, please cite it:
+
+```bibtex
+@misc{aballo2026persistenthomology,
+  author       = {Aballo, Roy and Gaba, Ya{\'e} Ulrich},
+  title        = {Persistent Homology: A From-Scratch Implementation of
+                  Vietoris-Rips Persistence in Python},
+  year         = {2026},
+  publisher    = {GitHub},
+  howpublished = {\url{https://github.com/royaballo/persistent-homology}},
+  note         = {AIMS Senegal Master's Thesis}
+}
+```
+
+The full citation will be updated once the thesis is published. Check back here,
+or contact the author.
+
+If your work relies on the algorithms rather than on this implementation of them,
+cite the original papers listed below instead: the standard reduction is
+Zomorodian and Carlsson's, the clearing optimisation is Chen and Kerber's, and
+the cohomology route is de Silva, Morozov, and Vejdemo-Johansson's. This package
+implements them; it does not introduce them.
 
 ## References
 
